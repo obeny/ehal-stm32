@@ -1,0 +1,7 @@
+init
+reset halt
+flash probe 0
+flash info 0
+flash write_image erase flash_img.hex 0x00000000 ihex
+reset run
+shutdown

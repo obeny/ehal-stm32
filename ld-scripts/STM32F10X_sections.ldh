@@ -1,0 +1,198 @@
+/* RAM placement */
+__RAM_BEG = ORIGIN(SRAM);
+__RAM_END = ORIGIN(SRAM) + LENGTH(SRAM);
+
+_stack_size = 0x400;
+_heap_size = 0x400;
+
+__stack_end__ = __RAM_END;
+
+/* Entry point */
+ENTRY(_vectors)
+
+/* Section Definitions */
+
+SECTIONS
+{
+	/* first section is .text which is used for code */
+	. = ORIGIN(FLASH);
+	
+	PROVIDE(_text = .);					/* define a global symbol _text at the beginning of code */
+	.text :
+	{
+		KEEP(*(.vectrom))				/* put vectors at the beginning and prevent from removal */
+		. = ALIGN(512);			 		/* ensure that space for vectors is reserved */
+		_vectrom_end = . - ORIGIN(FLASH);
+		KEEP(*(.text.Default_Handler));	/* keep default_handler to prevent optimizing and merging */
+		KEEP(*(.text.Reset_Handler));	/* locate reset_handler at early beginning */
+		*(.text .text.*)				/* remaining code */
+		*(.stub .gnu.linkonce.t.*)
+		*(.gcc_except_table)
+		*(.rodata) *(.rodata.*)			/* read-only data (constants) */
+		*(.gnu.linkonce.r.*)
+		
+		KEEP(*(.init))					/* static constructors and destructors */
+		KEEP(*(.fini))
+		. = ALIGN(4);
+	} >FLASH 
+	
+	. = ALIGN(4);
+
+	/*
+	 * Stack unwinding and exception handling sections.
+	 *
+	 * ARM compilers emit object files with .ARM.extab and .ARM.exidx sections
+	 * when using C++ exceptions. Also, at least GCC emits those sections when
+	 * dividing large numbers (64-bit) in C.
+	 */
+	/* exception unwinding information */
+	.ARM.extab :
+	{
+		*(.ARM.extab*)
+	} >FLASH
+	
+	/* index entries for section unwinding */
+	.ARM.exidx :
+	{
+		__exidx_start = .;
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+		__exidx_end = .;
+	} >FLASH
+
+	/* Newlib needs that for C++ support */
+	.preinit_array :
+	{
+		PROVIDE_HIDDEN(__preinit_array_start = .);
+		KEEP(*(.preinit_array*))
+		PROVIDE_HIDDEN(__preinit_array_end = .);
+	} >FLASH
+	.init_array :
+	{
+		PROVIDE_HIDDEN(__init_array_start = .);
+		KEEP(*(SORT(.init_array.*)))
+		KEEP(*(.init_array*))
+		PROVIDE_HIDDEN(__init_array_end = .);
+	} >FLASH
+	.fini_array :
+	{
+		PROVIDE_HIDDEN(__fini_array_start = .);
+		KEEP(*(SORT(.fini_array.*)))
+		KEEP(*(.fini_array*))
+		PROVIDE_HIDDEN(__fini_array_end = .);
+	} >FLASH
+
+	. = ORIGIN(EEP);
+	.progmem :
+	{
+		*(.progmem .progmem.*)
+	} >FLASH
+
+	. = ALIGN(4);
+
+	PROVIDE(etext = .);					/* define symbols required by ANSI C specification */
+	PROVIDE(_etext = .);
+
+	/* collect all initialized .data sections that go into RAM */
+	.data : AT (_etext)					/* put all variable initialization in flash (VMA) and load address in ram (LMA) */
+	{
+		PROVIDE(_data = .);				/* define a global symbol _data marking the start of the .data section */
+		KEEP(*(.vectram))				/* put vectors at the beginning and prevent from removal */
+		. = ALIGN(512);					/* ensure that space for vectors is reserved */
+		_vectram_end = . - ORIGIN(FLASH);
+		KEEP(*(.fastrun .fastrun.*))	/* put fastrun sections of code in ram for fast execution */
+		. = ALIGN(4);
+		SORT(CONSTRUCTORS)
+		. = ALIGN(4);
+		*(.data)
+		*(.data.*)
+		*(.gnu.linkonce.d.*)
+		. = ALIGN(4);
+	} >SRAM
+	
+	PROVIDE(edata = .);					/* define symbols required by ANSI C specification */
+	PROVIDE(_edata = .);
+
+	. = ALIGN(4);
+
+	/* .bss section which is used for uninitialized data */
+	.bss (NOLOAD) :
+	{
+		PROVIDE(__bss_start__ = .);
+		*(.bss) *(.bss.*)
+		*(.gnu.linkonce.b.*)
+		*(COMMON)
+		. = ALIGN(4);
+		PROVIDE(__bss_end__ = .);
+	} >SRAM
+	
+	. = ALIGN(4);
+	
+	PROVIDE (end = .);
+	PROVIDE (_end = .);
+
+	/* user stack and heap section - checking whether there is enough space */
+	._user_stack_heap (NOLOAD):
+	{
+		_susr_heap = .;
+		. = . + _heap_size;
+		_eusr_heap = .;
+
+		. = ALIGN(4);
+
+		PROVIDE(__stack_start__ = .);
+		_susr_stack = .;
+		. = . + _stack_size;
+		_eusr_stack = .;
+	} >SRAM
+
+	/* after that it's only debugging information. */
+
+	/* remove the debugging information from the standard libraries */
+	/DISCARD/ :
+	{
+		libc.a ( * )
+		libm.a ( * )
+		libgcc.a ( * )
+	}
+	
+	/* Stabs debugging sections.  */
+	.stab          0 : { *(.stab) }
+	.stabstr       0 : { *(.stabstr) }
+	.stab.excl     0 : { *(.stab.excl) }
+	.stab.exclstr  0 : { *(.stab.exclstr) }
+	.stab.index    0 : { *(.stab.index) }
+	.stab.indexstr 0 : { *(.stab.indexstr) }
+	.comment       0 : { *(.comment) }
+	/* DWARF debug sections.
+	 Symbols in the DWARF debugging sections are relative to the beginning
+	 of the section so we begin them at 0.
+	*/
+	/* DWARF 1 */
+	.debug          0 : { *(.debug) }
+	.line           0 : { *(.line) }
+	/* GNU DWARF 1 extensions */
+	.debug_srcinfo  0 : { *(.debug_srcinfo) }
+	.debug_sfnames  0 : { *(.debug_sfnames) }
+	/* DWARF 1.1 and DWARF 2 */
+	.debug_aranges  0 : { *(.debug_aranges) }
+	.debug_pubnames 0 : { *(.debug_pubnames) }
+	/* DWARF 2 */
+	.debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
+	.debug_abbrev   0 : { *(.debug_abbrev) }
+	.debug_line     0 : { *(.debug_line) }
+	.debug_frame    0 : { *(.debug_frame) }
+	.debug_str      0 : { *(.debug_str) }
+	.debug_loc      0 : { *(.debug_loc) }
+	.debug_macinfo  0 : { *(.debug_macinfo) }
+	/* SGI/MIPS DWARF 2 extensions */
+	.debug_weaknames 0 : { *(.debug_weaknames) }
+	.debug_funcnames 0 : { *(.debug_funcnames) }
+	.debug_typenames 0 : { *(.debug_typenames) }
+	.debug_varnames  0 : { *(.debug_varnames) }
+	/* DWARF 3 */
+	.debug_pubtypes 0 : { *(.debug_pubtypes) }
+	.debug_ranges   0 : { *(.debug_ranges) }
+
+	.ARM.attributes     0 : { KEEP (*(.ARM.attributes)) KEEP (*(.gnu.attributes)) }
+	.note.gnu.arm.ident 0 : { KEEP (*(.note.gnu.arm.ident)) }
+}

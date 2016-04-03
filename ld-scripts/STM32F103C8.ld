@@ -1,0 +1,2 @@
+INCLUDE STM32F103C8_memory.ldh
+INCLUDE STM32F10X_sections.ldh

@@ -1,0 +1,10 @@
+target remote :3333
+
+set architecture arm
+set gnutarget elf32-littlearm
+
+symbol-file symbols.elf
+
+monitor reset init
+monitor gdb_breakpoint_override hard
+monitor sleep 100

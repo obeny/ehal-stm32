@@ -1,0 +1,52 @@
+arch : bin hex
+
+$(TARGET).bin : $(TARGET).elf
+	@echo -n -e "$(C_YELLOW)[BIN]:$(C_NC) "
+	$(OBJCOPY) -O binary $(OBJCOPY_FLAGS) $< $@
+
+$(TARGET).hex : $(TARGET).elf
+	@echo -n -e "$(C_YELLOW)[HEX]:$(C_NC) "
+	$(OBJCOPY) -O ihex $(OBJCOPY_FLAGS) $< $@
+
+	
+flash_img.hex : $(TARGET).hex
+	@ln -snf $(TARGET).hex flash_img.hex
+
+flash_img.bin : $(TARGET).bin
+	@ln -snf $(TARGET).bin flash_img.bin
+
+symbols.elf : $(TARGET).elf
+	@ln -snf $(TARGET).elf symbols.elf
+
+
+program : flash_img.hex
+	@echo -e "$(C_RED)[PROG]:$(C_NC) Programming device..."
+	@killall $(GDB) || echo "nothing to kill..."
+	@killall $(OPENOCD_BIN) || echo "nothing to kill..."
+	$(OPENOCD) -f $(OPENOCD_PATH)/scripts/interface/$(OPENOCD_INTERFACE).cfg -c "transport select jtag"  \
+		-f $(OPENOCD_PATH)/scripts/target/stm32f1x.cfg \
+		-f ./$(LIB_VARIANT)/prog/openocd.cfg \
+		-f ./$(LIB_VARIANT)/prog/do_flash.ocd
+
+reset :
+	@echo -e "$(C_RED)[PROG]:$(C_NC) Resetting device..."
+	@killall $(GDB) || echo "nothing to kill..."
+	@killall $(OPENOCD_BIN) || echo "nothing to kill..."
+	$(OPENOCD) -f $(OPENOCD_PATH)/scripts/interface/$(OPENOCD_INTERFACE).cfg -c "transport select jtag" \
+		-f $(OPENOCD_PATH)/scripts/target/stm32f1x.cfg \
+		-f ./$(LIB_VARIANT)/prog/openocd.cfg \
+		-f ./$(LIB_VARIANT)/prog/reset.ocd
+
+
+elf : $(TARGET).elf symbols.elf
+bin : $(TARGET).bin flash_img.bin
+hex : $(TARGET).hex flash_img.hex
+
+
+clean_arch :
+	rm -fr flash_img.* symbols.elf
+
+# asm dependencies
+obj/stm32f10x_crt.o : \
+	src/conf_init.inc.s \
+	src/conf_impl_exit.inc.s

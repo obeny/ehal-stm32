@@ -1,0 +1,3 @@
+[submodule "ehal"]
+	path = ehal
+	url = https://github.com/obeny/ehal.git

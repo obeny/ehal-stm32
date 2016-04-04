@@ -30,7 +30,7 @@
 #include "core_cm3.h"
 
 #include "config.h"
-#include "lib_mcu_noarch/sync_timer/sync_timer.h"
+#include "ehal/sync_timer/sync_timer.h"
 
 
 /***************************************************************************

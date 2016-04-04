@@ -27,8 +27,8 @@
 #include "stm32f10x_rcc.h"
 
 #include "config.h"
-#include "lib_mcu_noarch/global.h"
-#include "lib_mcu_noarch/adc/adc.h"
+#include "ehal/global.h"
+#include "ehal/adc/adc.h"
 
 
 /***************************************************************************

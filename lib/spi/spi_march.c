@@ -20,7 +20,7 @@
 
 #include "config.h"
 #include "lib/io.h"
-#include "lib_mcu_noarch/spi/spi.h"
+#include "ehal/spi/spi.h"
 #include "lib/spi/spi_march.h"
 
 

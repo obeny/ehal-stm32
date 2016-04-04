@@ -43,7 +43,7 @@ CMSIS_NOWARN=yes
 # MAIN CONFIGURATION
 
 # variant of mcu library
-LIB_VARIANT=lib_stm32
+LIB_VARIANT=ehal-stm32
 
 # architecture toolchain prefix
 ARCH_PREFIX=arm-none-eabi-
@@ -52,7 +52,7 @@ ARCH_PREFIX=arm-none-eabi-
 #COLORS=no
 
 # common configuration
-CFLAGS_INC=-I./lib_stm32/include/CMSIS -I./lib_stm32/include/$(MCU_FAMILY)/DeviceSupport -I./lib_stm32/include/$(MCU_FAMILY)
+CFLAGS_INC=-I./$(LIB_VARIANT)/include/CMSIS -I./$(LIB_VARIANT)/include/$(MCU_FAMILY)/DeviceSupport -I./$(LIB_VARIANT)/include/$(MCU_FAMILY)
 
 CFLAGS_CPU?=cortex-m3
 

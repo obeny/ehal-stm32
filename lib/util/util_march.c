@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#include "lib_mcu_noarch/util/util.h"
+#include "ehal/util/util.h"
 
 
 /***************************************************************************

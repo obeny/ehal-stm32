@@ -25,7 +25,7 @@
 
 #include "stm32f10x_gpio.h"
 
-#include "lib_mcu_noarch/usart/usart.h"
+#include "ehal/usart/usart.h"
 #include "lib/usart/usart_march.h"
 
 

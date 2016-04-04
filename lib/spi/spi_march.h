@@ -39,7 +39,7 @@ extern "C" {
  *	INCLUDES
  ***************************************************************************/
 
-#include "lib_mcu_noarch/global.h"
+#include "ehal/global.h"
 #include "lib/io.h"
 #include "stm32f10x_gpio.h"
 

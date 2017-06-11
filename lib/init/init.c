@@ -11,8 +11,8 @@
  * \file init.c
  *
  * \author Marcin O'BenY Benka <obeny@obeny.net>
- * \date 04.02.2016
- * \version 1
+ * \date 09.04.2016
+ * \version 2
  *
  * \brief Performs a low level CPU initialization after c-code startup - implementation.
  * \note
@@ -33,6 +33,12 @@
 
 /***************************************************************************
  *	DEFINITIONS
+ ***************************************************************************/
+
+void lowLevelInit(void);
+
+ /***************************************************************************
+ *      FUNCTIONS
  ***************************************************************************/
 
 // --------------------------------------------------------------------------
@@ -79,6 +85,10 @@ VOID init(void)
 	// wait for PLL as system clock source
 	WAIT_FOR(RCC_GetSYSCLKSource() != 0x08);
 #endif // MCK_USE_PLL
+
+#ifdef LOWLEVELINIT
+	lowLevelInit();
+#endif
 }
 
 // END

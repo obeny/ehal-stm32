@@ -7,11 +7,25 @@
 #include "stm32f10x_i2c.h"
 
 #include "config.h"
-#include "lib/io.h"
 #include "ehal/i2c/i2c.h"
-#include "lib/i2c/i2c_march.h"
+#include "ehal/util/util.h"
 
 #include "ehal/debug/debug.h"
+
+/***************************************************************************
+ *	DEFINITIONS
+ ***************************************************************************/
+
+#define CHECK_EVENT_TIMEOUT(bus, event, timeout) \
+{ \
+	timeout_cur = 0; \
+	while (I2C_CheckEvent(bus, event) != SUCCESS) { \
+		++timeout_cur; \
+		if (timeout_cur > timeout) \
+			return (false); \
+		delayMs(1); \
+	} \
+}
 
 /***************************************************************************
  *	FUNCTIONS
@@ -45,17 +59,18 @@ BOOL i2cMasterTransfer(const i2c_cfg_st *i2c, const BOOL repeated_start, const U
 	char *recv_buf_cur = (char *)recv_buf;
 	UINT8 send_cnt = 0;
 	UINT8 recv_cnt = 0;
+	UINT16 timeout_cur = 0;
 
 	if (send_len > 0) {
-		I2C_GenerateSTART(I2C1, ENABLE);
-		while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
+		I2C_GenerateSTART((I2C_TypeDef*)i2c->i2c_if, ENABLE);
+		CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_MODE_SELECT, timeout);
 
-		I2C_Send7bitAddress(I2C1, 0x40 << 1, I2C_Direction_Transmitter);
-		while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) != SUCCESS);
+		I2C_Send7bitAddress((I2C_TypeDef*)i2c->i2c_if, 0x40 << 1, I2C_Direction_Transmitter);
+		CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED, timeout);
 
 		do {
 			I2C_SendData((I2C_TypeDef*)i2c->i2c_if, *send_buf_cur);
-			while (I2C_CheckEvent((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_BYTE_TRANSMITTED) != SUCCESS);
+			CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_BYTE_TRANSMITTED, timeout)
 			++send_buf_cur;
 			++send_cnt;
 		} while (send_cnt < send_len);
@@ -68,16 +83,16 @@ BOOL i2cMasterTransfer(const i2c_cfg_st *i2c, const BOOL repeated_start, const U
 	if (recv_len > 0)
 	{
 		I2C_GenerateSTART((I2C_TypeDef*)i2c->i2c_if, ENABLE);
-		while (I2C_CheckEvent((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
+		CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_MODE_SELECT, timeout);
 
 		I2C_Send7bitAddress((I2C_TypeDef*)i2c->i2c_if, addr << 1, I2C_Direction_Receiver);
 		I2C_AcknowledgeConfig((I2C_TypeDef*)i2c->i2c_if, ENABLE);
-		while (I2C_CheckEvent((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED) != SUCCESS);
+		CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED, timeout);
 		do
 		{
 			if (recv_cnt >= (recv_len - 1))
 				I2C_AcknowledgeConfig((I2C_TypeDef*)i2c->i2c_if, DISABLE);
-			while (I2C_CheckEvent((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_BYTE_RECEIVED) != SUCCESS);
+			CHECK_EVENT_TIMEOUT((I2C_TypeDef*)i2c->i2c_if, I2C_EVENT_MASTER_BYTE_RECEIVED, timeout);
 			*recv_buf_cur = I2C_ReceiveData((I2C_TypeDef*)i2c->i2c_if);
 			++recv_buf_cur;
 			++recv_cnt;
@@ -88,3 +103,5 @@ BOOL i2cMasterTransfer(const i2c_cfg_st *i2c, const BOOL repeated_start, const U
 
 	return (true);
 }
+
+// END
